@@ -1,0 +1,17 @@
+
+# If Github ask you a password after you've added ssh public key
+# Check if it recognized you
+$ ssh -T git@github.com
+# If it is OK execute
+$ git remote -v 
+# If there is 'https://...' replace it using
+$ git remote set-url origin git@github.com:username/repo.git
+
+# Line-ending settings "core.autocrlf"
+# "true"  Checkout Windows-style, commit Unix-style
+# "input" Checkout as-is, commit Unix-style
+# "false" Checkout as-is, commit as-is
+git config --global core.autocrlf input
+
+# Show Unicode characters not symbols codes
+$ git config --global core.quotePath false
