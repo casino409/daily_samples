@@ -1,0 +1,44 @@
+#debug
+ffmpeg -i input2.avi -f rawvideo - 2>/dev/null | x264 --preset slow --crf 18 --tune psnr --tff --sar 64:45 --frames 500 --input-res 720x576 -o out_tff.mkv -
+
+# release (solution)
+ffmpeg -i input1.avi -f rawvideo - 2>/dev/null | x264 --preset slow --crf 18 --bff --sar 64:45 --input-res 720x576 -o out.mkv -
+
+
+
+ffmpeg -i input1.avi input.yuv
+# better
+x264 --preset slow --tune psnr --bff --sar 64:45 --frames 500 --input-res 720x576 -o out.264 input.yuv
+# worse
+x264 --preset slow --tune psnr --bff --sar 64:45 --frames 500 --input-res 720x576 -o out.264 input.yuv
+
+
+
+ffmpeg -hide_banner -i 20061112_174844.avi -vf 'interlace=scan=tff:lowpass=complex,format=yuv420p' -flags +ildct -codec:v libx264 -preset veryfast -tune animation -profile:v high out.mp4
+
+ffmpeg -hide_banner -i 20061112_174844.avi -codec:v libx264 -preset slow -profile:v high -x264opts interlaced=1 out1.mp4
+
+FOR Bottom Field First(BFF): 
+ffmpeg -i ~/videos/bbb_1min.ts -pix_fmt yuv420p -c:v libx264 -flags +ilme+ildct -x264opts bff=1 ~/videos/testi.mp4
+
+FOR Top Field First(TFF): 
+ffmpeg -i ~/videos/bbb_1min.ts -pix_fmt yuv420p -c:v libx264 -flags +ilme+ildct -x264opts tff=1 ~/videos/testi.mp4
+
+Extracting individual video fields: (or yuv)
+ffmpeg -i video.avi -vf field=top    top%d.png
+ffmpeg -i video.avi -vf field=bottom bottom%d.png
+
+# nvidia interlaces
+ffmpeg -i source.mpg -vcodec h264_nvenc -flags +ildct+ilme -acodec copy -f mpegts out.mpg
+
+1)
+cmn='-i input1.avi -an -c:v libx264 -preset slow -crf 0 -flags +ilme+ildct -x264opts weightp=0'
+ffmpeg ${cmn}:tff=1 out1.h264
+ffmpeg ${cmn}:bff=1 out2.h264
+
+equal sizes :(
+twice
+
+2)
+cmn='-hide_banner -i input1.avi -codec:v libx264 -preset slow -profile:v high -x264opts interlaced=1'
+ffmpeg $cmn out3.h264
