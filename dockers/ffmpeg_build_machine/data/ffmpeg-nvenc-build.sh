@@ -1,8 +1,10 @@
 #!/bin/sh -e
 
-# This script will compile and install a static ffmpeg build.
+# This script will compile and install a static ffmpeg build with support for nvenc un ubuntu.
 
+# Based on: https://trac.ffmpeg.org/wiki/CompilationGuide/Ubuntu
 # Based on: https://gist.github.com/Brainiarc7/3f7695ac2a0905b05c5b
+# Rewritten here: https://github.com/ilyaevseev/ffmpeg-build-static/
 
 # Globals
 NASM_VERSION="2.14rc15"
@@ -10,14 +12,13 @@ YASM_VERSION="1.3.0"
 LAME_VERSION="3.100"
 OPUS_VERSION="1.2.1"
 LASS_VERSION="0.14.0"
+CUDA_DIR="/usr/local/cuda-10.1"
 WORK_DIR="/ffmpeg-build-static-sources"
 DEST_DIR="/ffmpeg-build-static-binaries"
 
 mkdir -p "$WORK_DIR" "$DEST_DIR" "$DEST_DIR/bin"
 
 export PATH="$DEST_DIR/bin:$PATH"
-
-MYDIR="$(cd "$(dirname "$0")" && pwd)"  #"
 
 ####  Routines  ################################################
 
@@ -33,6 +34,13 @@ Clone() {
 
     cd "$DIR"
     git pull
+}
+
+installNvidiaSDK() {
+    echo "Installing the nVidia NVENC SDK."
+    Clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+    make
+    make install PREFIX="$DEST_DIR"
 }
 
 compileNasm() {
@@ -148,14 +156,19 @@ compileFfmpeg() {
     echo "Compiling ffmpeg"
     Clone https://github.com/FFmpeg/FFmpeg -b master
 
+    export PATH="$CUDA_DIR/bin:$PATH"
     PKG_CONFIG_PATH="$DEST_DIR/lib/pkgconfig:$DEST_DIR/lib64/pkgconfig" \
     ./configure \
       --pkg-config-flags="--static" \
       --prefix="$DEST_DIR" \
       --bindir="$DEST_DIR/bin" \
-      --extra-cflags="-I $DEST_DIR/include" \
-      --extra-ldflags="-L $DEST_DIR/lib" \
+      --extra-cflags="-I $DEST_DIR/include -I $CUDA_DIR/include/" \
+      --extra-ldflags="-L $DEST_DIR/lib -L $CUDA_DIR/lib64/" \
       --extra-libs="-lpthread" \
+      --enable-cuda \
+      --enable-cuda-nvcc \
+      --enable-cuvid \
+      --enable-nvenc \
       --enable-gpl \
       --enable-libass \
       --enable-libfdk-aac \
@@ -170,9 +183,13 @@ compileFfmpeg() {
       --enable-libx265 \
       --enable-nonfree \
       --enable-libaom
+    # TODO --enable-libnpp
+    # current state is asking a linnpp**.so.10 on new machine
     Make install distclean
     hash -r
 }
+
+installNvidiaSDK
 
 compileNasm
 compileYasm
@@ -185,3 +202,4 @@ compileLibMP3Lame
 compileLibOpus
 compileLibAss
 compileFfmpeg
+
